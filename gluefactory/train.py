@@ -240,6 +240,8 @@ def training(rank, conf, output_dir, args):
             rank=device,
             init_method="file://" + str(args.lock_file),
         )
+        device += 1
+        print(device)
         torch.cuda.set_device(device)
 
         # adjust batch size and num of workers since these are per GPU
@@ -368,8 +370,8 @@ def training(rank, conf, output_dir, args):
             rank == 0
             and epoch % conf.train.test_every_epoch == 0
             and args.run_benchmarks
-        ):
-            for bname, eval_conf in conf.get("benchmarks", {}).items():
+        ):            
+            for bname, eval_conf in conf.get("benchmarks", {}).items():                
                 logger.info(f"Running eval on {bname}")
                 s, f, r = run_benchmark(
                     bname,
@@ -681,6 +683,7 @@ if __name__ == "__main__":
 
     if args.distributed:
         args.n_gpus = torch.cuda.device_count()
+        args.n_gpus = 1
         args.lock_file = output_dir / "distributed_lock"
         if args.lock_file.exists():
             args.lock_file.unlink()

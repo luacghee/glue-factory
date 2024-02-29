@@ -47,9 +47,9 @@ def sample_homography(img, conf: dict, size: list):
 class HomographyDataset(BaseDataset):
     default_conf = {
         # image search
-        "data_dir": "revisitop1m",  # the top-level directory
-        "image_dir": "jpg/",  # the subdirectory with the images
-        "image_list": "revisitop1m.txt",  # optional: list or filename of list
+        "data_dir": "custom",  # the top-level directory
+        "image_dir": "",  # the subdirectory with the images
+        "image_list": None,  # optional: list or filename of list
         "glob": ["*.jpg", "*.png", "*.jpeg", "*.JPG", "*.PNG"],
         # splits
         "train_size": 100,
@@ -87,11 +87,12 @@ class HomographyDataset(BaseDataset):
     def _init(self, conf):
         data_dir = DATA_PATH / conf.data_dir
         if not data_dir.exists():
-            if conf.data_dir == "revisitop1m":
-                logger.info("Downloading the revisitop1m dataset.")
-                self.download_revisitop1m()
-            else:
-                raise FileNotFoundError(data_dir)
+            # if conf.data_dir == "revisitop1m":
+            #     logger.info("Downloading the revisitop1m dataset.")
+            #     self.download_revisitop1m()
+            # else:
+            #     raise FileNotFoundError(data_dir)
+            FileNotFoundError(data_dir)
 
         image_dir = data_dir / conf.image_dir
         images = []
@@ -99,6 +100,7 @@ class HomographyDataset(BaseDataset):
             glob = [conf.glob] if isinstance(conf.glob, str) else conf.glob
             for g in glob:
                 images += list(image_dir.glob("**/" + g))
+                print(g)
             if len(images) == 0:
                 raise ValueError(f"Cannot find any image in folder: {image_dir}.")
             images = [i.relative_to(image_dir).as_posix() for i in images]
@@ -111,12 +113,14 @@ class HomographyDataset(BaseDataset):
             images = image_list.read_text().rstrip("\n").split("\n")
             for image in images:
                 if not (image_dir / image).exists():
+                    print("=============== A ===================")
                     raise FileNotFoundError(image_dir / image)
             logger.info("Found %d images in list file.", len(images))
         elif isinstance(conf.image_list, omegaconf.listconfig.ListConfig):
             images = conf.image_list.to_container()
             for image in images:
                 if not (image_dir / image).exists():
+                    print("=============== B ===================")                    
                     raise FileNotFoundError(image_dir / image)
         else:
             raise ValueError(conf.image_list)
@@ -127,25 +131,25 @@ class HomographyDataset(BaseDataset):
         val_images = images[conf.train_size : conf.train_size + conf.val_size]
         self.images = {"train": train_images, "val": val_images}
 
-    def download_revisitop1m(self):
-        data_dir = DATA_PATH / self.conf.data_dir
-        tmp_dir = data_dir.parent / "revisitop1m_tmp"
-        if tmp_dir.exists():  # The previous download failed.
-            shutil.rmtree(tmp_dir)
-        image_dir = tmp_dir / self.conf.image_dir
-        image_dir.mkdir(exist_ok=True, parents=True)
-        num_files = 100
-        url_base = "http://ptak.felk.cvut.cz/revisitop/revisitop1m/"
-        list_name = "revisitop1m.txt"
-        torch.hub.download_url_to_file(url_base + list_name, tmp_dir / list_name)
-        for n in tqdm(range(num_files), position=1):
-            tar_name = "revisitop1m.{}.tar.gz".format(n + 1)
-            tar_path = image_dir / tar_name
-            torch.hub.download_url_to_file(url_base + "jpg/" + tar_name, tar_path)
-            with tarfile.open(tar_path) as tar:
-                tar.extractall(path=image_dir)
-            tar_path.unlink()
-        shutil.move(tmp_dir, data_dir)
+    # def download_revisitop1m(self):
+    #     data_dir = DATA_PATH / self.conf.data_dir
+    #     tmp_dir = data_dir.parent / "revisitop1m_tmp"
+    #     if tmp_dir.exists():  # The previous download failed.
+    #         shutil.rmtree(tmp_dir)
+    #     image_dir = tmp_dir / self.conf.image_dir
+    #     image_dir.mkdir(exist_ok=True, parents=True)
+    #     num_files = 100
+    #     url_base = "http://ptak.felk.cvut.cz/revisitop/revisitop1m/"
+    #     list_name = "revisitop1m.txt"
+    #     torch.hub.download_url_to_file(url_base + list_name, tmp_dir / list_name)
+    #     for n in tqdm(range(num_files), position=1):
+    #         tar_name = "revisitop1m.{}.tar.gz".format(n + 1)
+    #         tar_path = image_dir / tar_name
+    #         torch.hub.download_url_to_file(url_base + "jpg/" + tar_name, tar_path)
+    #         with tarfile.open(tar_path) as tar:
+    #             tar.extractall(path=image_dir)
+    #         tar_path.unlink()
+    #     shutil.move(tmp_dir, data_dir)
 
     def get_dataset(self, split):
         return _Dataset(self.conf, self.images[split], split)
